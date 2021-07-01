@@ -1,4 +1,28 @@
 
+#define CVIN_PIN A0
+#define SCALE_PIN A2
+#define KEY_OF_PIN A7
+#define CHANGE_LAYOUT_PIN 6
+#define CHANGE_CV_MODE_PIN 7
+#define TRIGGER_PIN 8
+
+// This is used for in_scale_cv_mode = 1 since we allow 5 octaves.
+// There's no need to change this value
+#define GETADC_AT_5V 26656
+
+// It might unfortunately to recommended to calibrate this value
+// according to one's particlar power supply. On USB I'm at ~4748 mV
+// and the ADC's read 25376 amongst the noise
+#define GETADC_AT_ARDUINO_HIGH 25376
+
+
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 64 // OLED display height, in pixels
+
+
+#define OLED_RESET     4 // Reset pin # (or -1 if sharing Arduino reset pin)
+
+
 #define MAX_DAC_SEMITONE 57
 const int16_t PROGMEM semitone_cvs_dac[MAX_DAC_SEMITONE] = {
   6, 79, 151, 224, 297, 368, 441, 509, 584, 653, 727, 799,
@@ -47,8 +71,8 @@ const int16_t PROGMEM semitonecv_to_ADC16read[MAX_DAC_SEMITONE] = {
 #define BKEY_WIDTH 5
 #define BKEY_HEIGHT 10
 
-#define keyboard_layout_WIDTH 56
-#define keyboard_layout_HEIGHT 16
+#define KEYBOARD_LAYOUT_WIDTH 56
+#define KEYBOARD_LAYOUT_HEIGHT 16
 
 // Scales with note 1 in least significant bit
 //                  flat-2 in bit 1
@@ -402,6 +426,21 @@ const char *const notes[12] PROGMEM = {
   key_Fsharp, key_G, key_Gsharp, key_A, key_Asharp, key_B
 };
 
+
+// Draws the layout smaller or bigger
+#define PROP 2
+
+#define ROOT_DOT_SIZE 3
+
+
+// [0] = 0 -> white key
+//     = 1 -> black key
+// [1] delta x to next note (white->black or black->white might not be the same
+//                           if one is thinner/wider than the other)
+// [2] heigth of lower left corder
+// [3] width
+// [4] height
+// [5] rounded corner radius
 const int8_t piano_layout[12][6] =
 {
   {0, 5, 2, 7, 14, 2},    // W
@@ -421,18 +460,6 @@ const int8_t piano_layout[12][6] =
 
 const int8_t beatstep_layout[12][6] =
 {
-//  {0, 0, 8, 7, 7, 2},    // W
-//  {1, 8, 0, 7, 7, 2},    // K
-//  {0, 0, 8, 7, 7, 2},    // W
-//  {1, 8, 0, 7, 7, 2},   // K
-//  {0, 8, 8, 7, 7, 2},   // W
-//  {0, 0, 8, 7, 7, 2},   // W
-//  {1, 8, 0, 7, 7, 2},   // K
-//  {0, 0, 8, 7, 7, 2},   // W
-//  {1, 8, 0, 7, 7, 2},   // K
-//  {0, 0, 8, 7, 7, 2},   // W
-//  {1, 8, 0, 7, 7, 2},   // K
-//  {0, 8, 8, 7, 7, 2}    // W
   {0, 0, 9, 7, 7, 2},    // W
   {1, 8, 1, 7, 7, 2},    // K
   {0, 0, 9, 7, 7, 2},    // W
