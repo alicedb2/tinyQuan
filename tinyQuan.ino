@@ -4,35 +4,13 @@
 #include <Adafruit_SSD1306.h>
 #include <MCP4725.h>
 #include <ADS1X15.h>
-#include "tinyquantizer.h"
+#include "definitions.h"
 
-
-// This is used for in_scale_cv_mode = 1 since we allow 5 octaves.
-// There's no need to change this value
-#define GETADC_AT_5V 26656
-
-// It might unfortunately to recommended to calibrate this value
-// according to one's particlar power supply. On USB I'm at ~4748 mV
-// and the ADC's read 25376 amongst the noise
-#define GETADC_AT_ARDUINO_HIGH 25376
-
-
-#define SCREEN_WIDTH 128 // OLED display width, in pixels
-#define SCREEN_HEIGHT 64 // OLED display height, in pixels
-
-
-#define OLED_RESET     4 // Reset pin # (or -1 if sharing Arduino reset pin)
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 MCP4725 MCP(0x60);
 ADS1115 ADS(0x48);
 
-#define CVIN_PIN A0
-#define SCALE_PIN A2
-#define KEY_OF_PIN A7
-#define CHANGE_LAYOUT_PIN 6
-#define CHANGE_CV_MODE_PIN 7
-#define GATE_PIN 8
 
 uint8_t layout_index = 0;
 uint8_t last_layout_button_state = false;
@@ -43,21 +21,24 @@ long int last_cv_mode_button_change_millis = millis();
 
 uint8_t pixel_loc = 0;
 
-#define PROP 2
-
 char key_buffer[10];
 int16_t key0 = 0;
 
 char short_scale_name_buffer[15];
-int16_t current_key_of = 0;
+int8_t current_key_of = 0;
 
 uint8_t current_scale = 0;
 uint16_t current_scale_mask = CHROMATIC;
 uint8_t nb_notes_in_scale = 12;
 
 // in_scale_cv_mode = 0 ->  1 semitone / 83 mV  (non-constant CV difference to change note in scale)
-//         = 1 ->   1 note in_scale / 83 mV (constant CV difference to change note in scale
+//                  = 1 ->  1 note in_scale / 83 mV (constant CV difference to change note in scale
 bool in_scale_cv_mode = true;
+
+uint8_t last_semitone = 0;
+long int trigger_length = 5;
+bool reset_trigger = false;
+long int last_trigger_millis = millis();
 
 void setup() {
 
@@ -65,11 +46,15 @@ void setup() {
 
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
 
-  pinMode(GATE_PIN, OUTPUT);
+  pinMode(TRIGGER_PIN, OUTPUT);
   pinMode(CHANGE_CV_MODE_PIN, INPUT);
   pinMode(CHANGE_LAYOUT_PIN, INPUT);
   pinMode(SCALE_PIN, INPUT);
   pinMode(CVIN_PIN, INPUT);
+
+  digitalWrite(CHANGE_CV_MODE_PIN, LOW);
+  digitalWrite(CHANGE_LAYOUT_PIN, LOW);
+  digitalWrite(TRIGGER_PIN, LOW);
 
   display.clearDisplay();
 
@@ -105,11 +90,11 @@ void loop() {
     }
   }
 
-  Serial.println(in_scale_cv_mode);
-  Serial.println();
   //////////////////////////////////////////////
   //////////////////////////////////////////////
   //////////////////////////////////////////////
+
+
 
   /////////////////////////////////////////////
   ////////// Change layout button /////////////
@@ -192,6 +177,11 @@ void loop() {
   uint8_t semitone_in_scale;
   uint8_t note_in_scale;
 
+  if (reset_trigger && millis() - last_trigger_millis >= trigger_length) {
+    digitalWrite(TRIGGER_PIN, LOW);
+    reset_trigger = false;
+  }
+
   if (in_scale_cv_mode) {
     note_in_scale = map(cv_to_quantize,
                         -16, SEMITONE_CV_UPPER_BOUNDARY_EXCLUSIVE,
@@ -225,16 +215,23 @@ void loop() {
 
   MCP.setValue((int16_t)pgm_read_word_near(semitone_cvs_dac + semitone_in_scale));
 
+  if (last_semitone != semitone_in_scale) {
+    digitalWrite(TRIGGER_PIN, HIGH);
+    reset_trigger = true;
+
+    last_semitone = semitone_in_scale;
+    last_trigger_millis = millis();
+  }
+
   ////////////////////////////////////
   ////////////////////////////////////
   ////////////////////////////////////
   ////////////////////////////////////
   ////////////////////////////////////
+
 }
 
-
-
-void printKey(int8_t key, int8_t text_size) {
+void printKey(uint8_t key, uint8_t text_size) {
   display.fillRect(0, 0, SCREEN_WIDTH, 8 * text_size, SSD1306_BLACK);
   display.setTextSize(text_size);
   display.setTextColor(SSD1306_WHITE);
@@ -245,7 +242,7 @@ void printKey(int8_t key, int8_t text_size) {
 
 
 
-void printScale(int16_t scale, int8_t text_size) {
+void printScale(uint16_t scale, uint8_t text_size) {
   display.fillRect(0, 16, SCREEN_WIDTH, 8 * text_size, SSD1306_BLACK);
   display.setTextSize(text_size);
   display.setTextColor(SSD1306_WHITE);
@@ -254,17 +251,17 @@ void printScale(int16_t scale, int8_t text_size) {
   display.println(short_scale_name_buffer);
 }
 
-
-
 void drawKeyboard(int16_t scale, int8_t key_of, int8_t origin_key) {
   uint16_t on_keys = 0;
 
   static int16_t x0 = 0;
-  static int16_t y0 = SCREEN_HEIGHT - PROP * keyboard_layout_HEIGHT;
+  static int16_t y0 = SCREEN_HEIGHT - PROP * KEYBOARD_LAYOUT_HEIGHT;
 
-  display.fillRect(x0, y0, SCREEN_WIDTH, PROP * keyboard_layout_HEIGHT, SSD1306_BLACK);
+  uint8_t root_dot_y_offset;
 
-  static uint8_t keys_to_display = ceil(12.0 * float(SCREEN_WIDTH) / float(PROP * keyboard_layout_WIDTH));
+  display.fillRect(x0, y0, SCREEN_WIDTH, PROP * KEYBOARD_LAYOUT_HEIGHT, SSD1306_BLACK);
+
+  static uint8_t keys_to_display = ceil(12.0 * float(SCREEN_WIDTH) / float(PROP * KEYBOARD_LAYOUT_WIDTH));
 
   //  uint16_t on_keys = scales[scale];
   on_keys = pgm_read_word_near(scales + scale);
@@ -281,7 +278,10 @@ void drawKeyboard(int16_t scale, int8_t key_of, int8_t origin_key) {
   // Last nudge to print _k = -1
   on_keys = rotate12Left(on_keys, 1);
 
-  // Draw white notes
+
+  //////////////////////////////////////////////
+  ////////////// Draw white notes //////////////
+  //////////////////////////////////////////////
   int8_t x_offset = -keyboard_layout[mod(origin_key - 1, 12)][1] / 2;
   for (int16_t _k = -1, k; _k < keys_to_display + 1; _k++) {
 
@@ -302,8 +302,17 @@ void drawKeyboard(int16_t scale, int8_t key_of, int8_t origin_key) {
                               keyboard_layout[k][5], SSD1306_WHITE);
       }
 
-    }
 
+      // Draw root note marker
+      if (k == current_key_of) {
+        root_dot_y_offset = (layout_index == 0) ? (2 * keyboard_layout[k][4]) / 3 : (keyboard_layout[k][4] - ROOT_DOT_SIZE) / 2; 
+        display.fillRoundRect(x0 + PROP * (x_offset + keyboard_layout[k][3] / 2 - 1),
+                              y0 + PROP * (keyboard_layout[k][2] + root_dot_y_offset),
+                              PROP * ROOT_DOT_SIZE, PROP * ROOT_DOT_SIZE, 1,
+                              SSD1306_BLACK);
+      }
+
+    }
     x_offset += keyboard_layout[k][1];
     on_keys = rotate12Right(on_keys, 1);
   }
@@ -320,13 +329,17 @@ void drawKeyboard(int16_t scale, int8_t key_of, int8_t origin_key) {
   on_keys = rotate12Left(on_keys, 1);
   //////////////////
 
+
+  //////////////////////////////////////////////
+  ////////////// Draw black notes //////////////
+  //////////////////////////////////////////////
   x_offset = -keyboard_layout[mod(origin_key - 1, 12)][1] / 2;
   for (int8_t _k = -1, k; _k < keys_to_display + 1; _k++) {
 
     k = mod(_k + origin_key, 12);
 
     if (keyboard_layout[k][0] == 1) {
-      if (on_keys & 1) {
+      if (on_keys & 0b1) {
         display.fillRoundRect(x0 + PROP * x_offset,
                               y0 + PROP * keyboard_layout[k][2],
                               PROP * keyboard_layout[k][3], PROP * keyboard_layout[k][4],
@@ -341,6 +354,7 @@ void drawKeyboard(int16_t scale, int8_t key_of, int8_t origin_key) {
                                 PROP * keyboard_layout[k][3], PROP * keyboard_layout[k][4],
                                 keyboard_layout[k][5], SSD1306_BLACK);
         }
+
       }
       else {
         display.fillRoundRect(x0 + PROP * x_offset,
@@ -352,6 +366,15 @@ void drawKeyboard(int16_t scale, int8_t key_of, int8_t origin_key) {
                               y0 + PROP * keyboard_layout[k][2],
                               PROP * keyboard_layout[k][3], PROP * keyboard_layout[k][4],
                               keyboard_layout[k][5], SSD1306_WHITE);
+      }
+
+      // Draw root note marker
+      if (k == current_key_of) {
+        root_dot_y_offset = (layout_index == 0) ? (2 * keyboard_layout[k][4]) / 3 : (keyboard_layout[k][4] - ROOT_DOT_SIZE) / 2;
+        display.fillRoundRect(x0 + PROP * (x_offset + keyboard_layout[k][3] / 2 - 1),
+                           y0 + PROP * (keyboard_layout[k][2] + root_dot_y_offset),
+                           PROP * ROOT_DOT_SIZE, PROP * ROOT_DOT_SIZE, 1,
+                           SSD1306_BLACK);
       }
     }
 
