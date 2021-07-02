@@ -13,11 +13,8 @@ ADS1115 ADS(0x48);
 
 
 uint8_t layout_index = 0;
-uint8_t last_layout_button_state = false;
+bool last_layout_button_state = false;
 long int last_layout_button_change_millis = millis();
-
-uint8_t last_cv_mode_button_state = false;
-long int last_cv_mode_button_change_millis = millis();
 
 uint8_t pixel_loc = 0;
 
@@ -51,6 +48,7 @@ void setup() {
   pinMode(CHANGE_LAYOUT_PIN, INPUT);
   pinMode(SCALE_PIN, INPUT);
   pinMode(CVIN_PIN, INPUT);
+  pinMode(LED_BUILTIN, OUTPUT);
 
   digitalWrite(CHANGE_CV_MODE_PIN, LOW);
   digitalWrite(CHANGE_LAYOUT_PIN, LOW);
@@ -65,34 +63,31 @@ void setup() {
   ADS.begin();
   ADS.setGain(0);
 
+  //  Serial.println(MCP.isConnected());
+  //  Serial.println(ADS.isConnected());
+
   keyboard_layout = keyboard_layouts[layout_index];
 
 }
 
 void loop() {
 
-  //////////////////////////////////////////////
-  ////////// Change cv mode button /////////////
-  //////////////////////////////////////////////
+  /////////////////////////////////////////////
+  ////////// Change cv mode button ////////////
+  /////////////////////////////////////////////
 
-  bool in_scale_cv_mode_state;
-  in_scale_cv_mode_state = digitalRead(CHANGE_CV_MODE_PIN);
+  if (digitalRead(CHANGE_CV_MODE_PIN) == HIGH) {
+    in_scale_cv_mode = true;
+    digitalWrite(LED_BUILTIN, HIGH);
 
-  if (millis() - last_layout_button_change_millis > 100) {
-    last_layout_button_change_millis = millis();
-    if (in_scale_cv_mode_state == HIGH && last_cv_mode_button_state == LOW) {
-      in_scale_cv_mode_state = HIGH;
-      in_scale_cv_mode = !in_scale_cv_mode;
-    }
-    if (in_scale_cv_mode_state == LOW && last_cv_mode_button_state == HIGH) {
-      last_cv_mode_button_state = LOW;
-      //    in_scale_cv_mode = false;
-    }
+  } else {
+    in_scale_cv_mode = false;
+    digitalWrite(LED_BUILTIN, LOW);
+
   }
-
-  //////////////////////////////////////////////
-  //////////////////////////////////////////////
-  //////////////////////////////////////////////
+  /////////////////////////////////////////////
+  /////////////////////////////////////////////
+  /////////////////////////////////////////////
 
 
 
@@ -101,21 +96,19 @@ void loop() {
   /////////////////////////////////////////////
   bool layout_button_state;
 
-  if (millis() - last_cv_mode_button_change_millis > 100) {
-    last_cv_mode_button_change_millis = millis();
 
-    layout_button_state = digitalRead(CHANGE_LAYOUT_PIN);
-    if (layout_button_state == HIGH && last_layout_button_state == LOW) {
-      last_layout_button_state = HIGH;
-      layout_index = (layout_index + 1) % 2;
-      keyboard_layout = keyboard_layouts[layout_index];
-      drawKeyboard(current_scale, current_key_of, 0);
-      display.display();
-    }
-    if (layout_button_state == LOW && last_layout_button_state == HIGH) {
-      last_layout_button_state = LOW;
-    }
+  layout_button_state = digitalRead(CHANGE_LAYOUT_PIN);
+  if (layout_button_state == HIGH && last_layout_button_state == LOW) {
+    last_layout_button_state = HIGH;
+    layout_index = (layout_index + 1) % 2;
+    keyboard_layout = keyboard_layouts[layout_index];
+    drawKeyboard(current_scale, current_key_of, 0);
+    display.display();
   }
+  if (layout_button_state == LOW && last_layout_button_state == HIGH) {
+    last_layout_button_state = LOW;
+  }
+
   /////////////////////////////////////////////
   /////////////////////////////////////////////
   /////////////////////////////////////////////
@@ -305,7 +298,7 @@ void drawKeyboard(int16_t scale, int8_t key_of, int8_t origin_key) {
 
       // Draw root note marker
       if (k == current_key_of) {
-        root_dot_y_offset = (layout_index == 0) ? (2 * keyboard_layout[k][4]) / 3 : (keyboard_layout[k][4] - ROOT_DOT_SIZE) / 2; 
+        root_dot_y_offset = (layout_index == 0) ? (2 * keyboard_layout[k][4]) / 3 : (keyboard_layout[k][4] - ROOT_DOT_SIZE) / 2;
         display.fillRoundRect(x0 + PROP * (x_offset + keyboard_layout[k][3] / 2 - 1),
                               y0 + PROP * (keyboard_layout[k][2] + root_dot_y_offset),
                               PROP * ROOT_DOT_SIZE, PROP * ROOT_DOT_SIZE, 1,
@@ -372,9 +365,9 @@ void drawKeyboard(int16_t scale, int8_t key_of, int8_t origin_key) {
       if (k == current_key_of) {
         root_dot_y_offset = (layout_index == 0) ? (2 * keyboard_layout[k][4]) / 3 : (keyboard_layout[k][4] - ROOT_DOT_SIZE) / 2;
         display.fillRoundRect(x0 + PROP * (x_offset + keyboard_layout[k][3] / 2 - 1),
-                           y0 + PROP * (keyboard_layout[k][2] + root_dot_y_offset),
-                           PROP * ROOT_DOT_SIZE, PROP * ROOT_DOT_SIZE, 1,
-                           SSD1306_BLACK);
+                              y0 + PROP * (keyboard_layout[k][2] + root_dot_y_offset),
+                              PROP * ROOT_DOT_SIZE, PROP * ROOT_DOT_SIZE, 1,
+                              SSD1306_BLACK);
       }
     }
 
