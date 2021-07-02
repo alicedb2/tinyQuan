@@ -111,7 +111,7 @@ const int16_t PROGMEM semitonecv_to_ADC16read[MAX_DAC_SEMITONE] = {
 #define HARMONIC_PHRYGIAN 0x9ab
 #define PHRYGIAN_MAJOR 0xaad
 #define LYDIAN_B3 0xacd
-#define MAJOR_LOCRIAN 0x757
+#define MAJOR_LOCRIAN 0x575
 #define MINOR_LOCRIAN 0x56d
 #define SUPER_LOCRIAN 0x55b
 
@@ -186,8 +186,6 @@ const int16_t PROGMEM semitonecv_to_ADC16read[MAX_DAC_SEMITONE] = {
 #define HARMONIC_MAJOR 0x9b5
 #define DOUBLE_HARMONIC_MAJOR 0x9b3
 #define NEAPOLITAN_MAJOR 0xab3
-#define MAJOR_LOCARIAN 0x575
-//#define BLUES_MAJOR
 #define BEBOP_MAJOR 0xbb5
 #define HEXATONIC_1_MAJOR 0xa95
 #define HEXATONIC_2_MAJOR 0x2b5
@@ -431,6 +429,9 @@ const char *const notes[12] PROGMEM = {
 #define PROP 2
 
 #define ROOT_DOT_SIZE 3
+
+
+
 
 
 // [0] = 0 -> white key
