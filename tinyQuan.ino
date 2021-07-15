@@ -39,7 +39,7 @@ long int last_trigger_millis = millis();
 
 void setup() {
 
-  Serial.begin(115200);
+//  Serial.begin(115200);
 
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
 
@@ -71,7 +71,7 @@ void setup() {
 }
 
 void loop() {
-
+//  Serial.println(ADS.readADC(1));
   /////////////////////////////////////////////
   ////////// Change cv mode button ////////////
   /////////////////////////////////////////////
@@ -115,9 +115,9 @@ void loop() {
 
   int16_t new_scale = ADS.readADC(1);
 
-  if (abs(new_scale - current_scale) < GETADC_AT_ARDUINO_HIGH / NUM_SCALES * 1.5) {
-    new_scale = current_scale;
-  }
+//  if (abs(new_scale - current_scale) < GETADC_AT_ARDUINO_HIGH / NUM_SCALES * 1.5) {
+//    new_scale = current_scale;
+//  }
 
   new_scale = map(new_scale, 0, GETADC_AT_ARDUINO_HIGH, -1, NUM_SCALES);
   new_scale = constrain(new_scale, 0, NUM_SCALES - 1);
@@ -140,14 +140,16 @@ void loop() {
     }
 
     display.clearDisplay();
-    printKey(current_key_of, 2);
+//    printKey(current_key_of, 2);
     printScale(current_scale, 2);
 
     //    drawKeyboard(current_scale, current_key_of, current_key_of);
     drawKeyboard(current_scale, current_key_of, 0);
 
+    // Draw little indicator
     pixel_loc = map(current_scale, 0, NUM_SCALES - 1, 0, SCREEN_WIDTH - 8);
-    display.fillRect(pixel_loc, 15, 8, 1, SSD1306_WHITE);
+//    display.fillRect(pixel_loc, 15, 8, 1, SSD1306_WHITE);
+    display.fillRoundRect(pixel_loc, 16, 8, 6, 1, SSD1306_WHITE);
 
     display.display();
 
@@ -224,8 +226,9 @@ void loop() {
 
 }
 
+
 void printKey(uint8_t key, uint8_t text_size) {
-  display.fillRect(0, 0, SCREEN_WIDTH, 8 * text_size, SSD1306_BLACK);
+  display.fillRect(0, 0, SCREEN_WIDTH / 2, 8 * text_size, SSD1306_BLACK);
   display.setTextSize(text_size);
   display.setTextColor(SSD1306_WHITE);
   display.setCursor(0, 0);
@@ -239,7 +242,7 @@ void printScale(uint16_t scale, uint8_t text_size) {
   display.fillRect(0, 16, SCREEN_WIDTH, 8 * text_size, SSD1306_BLACK);
   display.setTextSize(text_size);
   display.setTextColor(SSD1306_WHITE);
-  display.setCursor(0, 16);
+  display.setCursor(0, 0);//16);
   strcpy_P(short_scale_name_buffer, (char *)pgm_read_word(&(short_scale_names[scale])));
   display.println(short_scale_name_buffer);
 }
@@ -248,7 +251,8 @@ void drawKeyboard(int16_t scale, int8_t key_of, int8_t origin_key) {
   uint16_t on_keys = 0;
 
   static int16_t x0 = 0;
-  static int16_t y0 = SCREEN_HEIGHT - PROP * KEYBOARD_LAYOUT_HEIGHT;
+//  static int16_t y0 = SCREEN_HEIGHT - PROP * KEYBOARD_LAYOUT_HEIGHT;
+  static int16_t y0 = SCREEN_HEIGHT - PROP * KEYBOARD_LAYOUT_HEIGHT - 8;
 
   uint8_t root_dot_y_offset;
 
