@@ -13,7 +13,7 @@
 // It might unfortunately to recommended to calibrate this value
 // according to one's particlar power supply. On USB I'm at ~4748 mV
 // and the ADC's read 25376 amongst the noise
-#define GETADC_AT_ARDUINO_HIGH 25376
+#define GETADC_AT_ARDUINO_HIGH 25200
 
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
@@ -200,7 +200,7 @@ const int16_t PROGMEM semitonecv_to_ADC16read[MAX_DAC_SEMITONE] = {
 //#define HARMONIC_MINOR
 #define DOUBLE_HARMONIC_MINOR 0x9cd
 #define NEAPOLITAIN_MINOR 0x9ab
-#define MINOR_LOCARIAN 0x56d
+#define MINOR_LOCRIAN 0x56d
 //#define BLUES_MINOR
 #define BEBOP_MINOR 0xdad
 #define HEXATONIC_1_MINOR 0x58d
@@ -235,11 +235,11 @@ const PROGMEM uint16_t scales[NUM_SCALES] = {
   MESSIANE_III, MESSIANE_IV, MESSIANE_V, MESSIANE_VI, MESSIANE_VII,
 
   NATURAL_MAJOR, LYDIAN, MIXOLYDIAN, MAJOR_MINOR, HARMONIC_MAJOR,
-  DOUBLE_HARMONIC_MAJOR, NEAPOLITAN_MAJOR, MAJOR_LOCARIAN, BLUES_MAJOR, BEBOP_MAJOR,
+  DOUBLE_HARMONIC_MAJOR, NEAPOLITAN_MAJOR, MAJOR_LOCRIAN, BLUES_MAJOR, BEBOP_MAJOR,
   HEXATONIC_1_MAJOR, HEXATONIC_2_MAJOR, PENTATONIC_1_MAJOR, PENTATONIC_2_MAJOR, PENTATONIC_3_MAJOR,
 
   NATURAL_MINOR, DORIAN, PHRYGIAN, MINOR_MAJOR, HARMONIC_MINOR,
-  DOUBLE_HARMONIC_MINOR, NEAPOLITAIN_MINOR, MINOR_LOCARIAN, BLUES_MINOR, BEBOP_MINOR,
+  DOUBLE_HARMONIC_MINOR, NEAPOLITAIN_MINOR, MINOR_LOCRIAN, BLUES_MINOR, BEBOP_MINOR,
   HEXATONIC_1_MINOR, HEXATONIC_2_MINOR, PENTATONIC_1_MINOR, PENTATONIC_2_MINOR, PENTATONIC_3_MINOR
 };
 
@@ -265,7 +265,7 @@ const char Phrygian_string[] PROGMEM = "Phrygian";
 const char Lydian_string[] PROGMEM = "Lydian";
 const char Mixolydian_string[] PROGMEM = "Mixolydian";
 const char Aeolian_string[] PROGMEM = "Aeolian";
-const char Locarian_string[] PROGMEM = "Locarian";
+const char Locrian_string[] PROGMEM = "Locrian";
 const char Ionian_b2_string[] PROGMEM = "Ionian b2";
 const char Dorian_b5_string[] PROGMEM = "Dorian b5";
 const char Harm_Phry_string[] PROGMEM = "Harm Phry";
@@ -377,7 +377,7 @@ const char *const short_scale_names[NUM_SCALES] PROGMEM = {
   Arabic_string, Altered_string, Whl_Tone_string, H_W_Dim_string, W_H_Dim_string,
 
   Ionian_string, Dorian_string, Phrygian_string, Lydian_string, Mixolydian_string,
-  Aeolian_string, Locarian_string, Ionian_b2_string, Dorian_b5_string, Harm_Phry_string,
+  Aeolian_string, Locrian_string, Ionian_b2_string, Dorian_b5_string, Harm_Phry_string,
   Phry_Maj_string, Lydian_b3_string, Maj_Locr_string, Min_Locr_string, Super_Locr_string,
 
   Lydian_7b_string, Altered_string, Diminished_string, Mix_b13_string, Mix_b9_b13_string,
