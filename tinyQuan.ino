@@ -29,20 +29,20 @@ char key_buffer[10];
 int16_t key0 = 0;
 
 char short_scale_name_buffer[15];
-uint8_t current_scale = 1;
+uint8_t current_scale = 1; // Force refresh at start
 uint16_t current_scale_mask = MAJOR;
 uint8_t nb_notes_in_scale = 12;
 
-uint8_t current_root = 1;
+uint8_t current_root_semitone = 1; // Force refresh at start
 
 // in_scale_cv_mode = 0 ->  1 semitone / 83 mV  (non-constant CV difference to change note in scale)
 //                  = 1 ->  1 note in_scale / 83 mV (constant CV difference to change note in scale
 bool volatile in_scale_cv_mode = false;
 
-uint8_t last_semitone = 0;
+uint8_t last_semitone_index = 0;
 long int trigger_length = 5;
 bool reset_trigger = false;
-long int last_trigger_millis = millis();
+long int last_gate_on_millis = millis();
 
 
 /////////// ROTARY ENCODERS //////////
@@ -132,63 +132,79 @@ void loop() {
   ////////////////////////////////////
   ////////////////////////////////////
   ////////////////////////////////////
-
-  int16_t cv_to_quantize = ADS.readADC(0);
   // Serial.println();
   // Serial.print("cv_to_quantize:");
   // Serial.print(cv_to_quantize);
   // Serial.print("  ");
-  uint8_t semitone;
-  uint8_t semitone_in_scale;
-  uint8_t note_in_scale;
+  uint8_t semitones_above_root_in_scale;
 
-  if (reset_trigger && millis() - last_trigger_millis >= trigger_length) {
+  uint16_t temp_scale_mask = current_scale_mask;
+
+  uint8_t note_in_scale;
+  uint8_t root_semitone;
+
+  int16_t cv_to_quantize = ADS.readADC(0);
+  if (reset_trigger && millis() - last_gate_on_millis >= trigger_length) {
     digitalWrite(TRIGGER_PIN, LOW);
     reset_trigger = false;
   }
 
-
   if (in_scale_cv_mode) {
-    ///// Notes in scale are evenly spaced along CV /////
-    ///// If there are 5 notes in the scale then there will be 200mV between notes /////
     note_in_scale = map(cv_to_quantize,
-                        -16, SEMITONE_CV_UPPER_BOUNDARY_EXCLUSIVE,
-                        0, 5 * nb_notes_in_scale + 1);
+                        CV_0V_BOUNDARY_INCLUSIVE, CV_ABOVE_5V_BOUNDARY_EXCLUSIVE,
+                        0, 5 * nb_notes_in_scale + 1); // 5V spans 5 octave
 
-    note_in_scale = constrain(note_in_scale, 0, MAX_DAC_SEMITONE - 1);
+    Serial.print(cv_to_quantize);
+    Serial.print("  ");
+    Serial.println(note_in_scale);
 
-    semitone_in_scale = current_root;
-    for (uint8_t i = current_root, note_idx = 0; i < MAX_DAC_SEMITONE; i++) {
-      bool is_semitone_in_scale = bitRead(rotate12Right(current_scale_mask, i), 0);
-      semitone_in_scale = is_semitone_in_scale ? i : semitone_in_scale;
-      note_idx += is_semitone_in_scale;
-      if (note_idx >= note_in_scale) break;
+    semitones_above_root_in_scale = 0;
+    // The upper boundary is a bit janky if root_semitone != 0, we'll constrain it later.
+    for (uint8_t semitones_above_root = 0, note = 0; semitones_above_root < MAX_DAC_SEMITONE; semitones_above_root++) {
+
+      if (bitRead(temp_scale_mask, 0)) {
+        semitones_above_root_in_scale = semitones_above_root;
+        note += 1;
+        if (note >= note_in_scale) {
+          break;
+        }
+      }
+
+      temp_scale_mask = rotate12Right(temp_scale_mask, 1);
+
     }
 
   } else {
-    ///// Semitones are evenly spaces along CV with roughly 83.3mV between semitone /////
-    for (uint16_t semitone = current_root; semitone < MAX_DAC_SEMITONE; semitone++) {
+    semitones_above_root_in_scale = 0;
 
-      if (bitRead(rotate12Right(current_scale_mask, current_root + semitone), 0)) {
-        semitone_in_scale = semitone;
-      }
+    // The upper boundary is a bit janky if root_semitone != 0, we'll constrain it later.
+    for (uint8_t semitones_above_root = 0; semitones_above_root < MAX_DAC_SEMITONE; semitones_above_root++) {
 
-      if (cv_to_quantize <= (int16_t)pgm_read_word_near(semitonecv_to_ADC16read + semitone)) {
+      int16_t semitone_cv = (int16_t)pgm_read_word_near(inter_semitonecv_to_ADC16read + semitones_above_root);
+      if (semitone_cv >= cv_to_quantize) {
         break;
       }
 
-    }
+      if (bitRead(temp_scale_mask, 0)) {
+        semitones_above_root_in_scale = semitones_above_root;
+      }
 
+      temp_scale_mask = rotate12Right(temp_scale_mask, 1);
+
+    }
   }
 
-  MCP.setValue((int16_t)pgm_read_word_near(semitone_cvs_dac + semitone_in_scale));
+  uint8_t semitone_index = current_root_semitone + semitones_above_root_in_scale;
+  semitone_index = min(semitone_index, MAX_DAC_SEMITONE - 1);
+  MCP.setValue((int16_t)pgm_read_word_near(semitone_cvs_dac + semitone_index));
 
-  if (last_semitone != semitone_in_scale) {
+
+  if (last_semitone_index != semitone_index) {
     digitalWrite(TRIGGER_PIN, HIGH);
     reset_trigger = true;
 
-    last_semitone = semitone_in_scale;
-    last_trigger_millis = millis();
+    last_semitone_index = semitone_index;
+    last_gate_on_millis = millis();
   }
 
   ////////////////////////////////////
@@ -201,7 +217,7 @@ void loop() {
   if (refresh_layout) {
     refresh_layout = false;
     keyboard_layout = keyboard_layouts[layout_index];
-    drawKeyboard(current_scale, current_root, 0);
+    drawKeyboard(current_scale, current_root_semitone, 0);
     display.display();
   }
 
@@ -210,22 +226,22 @@ void loop() {
   /////////////////////////////////////////////
   /////////////////////////////////////////////
 
-  if ((new_root != current_root) || (new_scale != current_scale)) {
+  if ((new_root != current_root_semitone) || (new_scale != current_scale)) {
 
-    if (new_root != current_root) {
-      Serial.print("change key ");
-      Serial.print(current_root);
-      Serial.print(" -> ");
-      Serial.println(new_root);
-    }
-    if (new_scale != current_scale) {
-      Serial.print("change scale ");
-      Serial.print(current_scale);
-      Serial.print(" -> ");
-      Serial.println(new_scale);
-    }
+    //    if (new_root != current_root_semitone) {
+    //      Serial.print("change key ");
+    //      Serial.print(current_root_semitone);
+    //      Serial.print(" -> ");
+    //      Serial.println(new_root);
+    //    }
+    //    if (new_scale != current_scale) {
+    //      Serial.print("change scale ");
+    //      Serial.print(current_scale);
+    //      Serial.print(" -> ");
+    //      Serial.println(new_scale);
+    //    }
 
-    current_root = new_root;
+    current_root_semitone = new_root;
     current_scale = new_scale;
     current_scale_mask = pgm_read_word_near(scales + current_scale);
 
@@ -236,11 +252,11 @@ void loop() {
     }
 
     display.clearDisplay();
-    //    printKey(current_root, 2);
+    //    printKey(current_root_semitone, 2);
     printScale(current_scale, 2);
 
-    //    drawKeyboard(current_scale, current_root, current_root);
-    drawKeyboard(current_scale, current_root, 0);
+    //    drawKeyboard(current_scale, current_root_semitone, current_root_semitone);
+    drawKeyboard(current_scale, current_root_semitone, 0);
 
     // Draw little indicator
     //    pixel_loc = map(current_scale, 0, NUM_SCALES - 1, 0, SCREEN_WIDTH - 8);
@@ -351,7 +367,7 @@ void drawKeyboard(int16_t scale, int8_t root, int8_t origin_key) {
 
 
       // Draw root note marker
-      if (k == current_root) {
+      if (k == current_root_semitone) {
         root_dot_y_offset = (layout_index == 0) ? (2 * keyboard_layout[k][4]) / 3 : (keyboard_layout[k][4] - ROOT_DOT_SIZE) / 2;
         display.fillRoundRect(x0 + PROP * (x_offset + keyboard_layout[k][3] / 2 - 1),
                               y0 + PROP * (keyboard_layout[k][2] + root_dot_y_offset),
@@ -415,7 +431,7 @@ void drawKeyboard(int16_t scale, int8_t root, int8_t origin_key) {
       }
 
       // Draw root note marker
-      if (k == current_root) {
+      if (k == current_root_semitone) {
         root_dot_y_offset = (layout_index == 0) ? (2 * keyboard_layout[k][4]) / 3 : (keyboard_layout[k][4] - ROOT_DOT_SIZE) / 2;
 
         display.fillRoundRect(x0 + PROP * (x_offset + keyboard_layout[k][3] / 2 - 1),
