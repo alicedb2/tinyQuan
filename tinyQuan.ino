@@ -12,9 +12,16 @@ MCP4725 MCP(0x60);
 ADS1115 ADS(0x48);
 
 
-uint8_t layout_index = 0;
-bool last_layout_button_state = false;
-long int last_layout_button_change_millis = millis();
+bool tuning_dac = false;
+bool tuning_adc = false;
+
+
+bool volatile refresh_little_indicator = false;
+
+uint8_t volatile layout_index = 0;
+bool volatile refresh_layout = false;
+//bool last_layout_button_state = false;
+//long int last_layout_button_change_millis = millis();
 
 uint8_t pixel_loc = 0;
 
@@ -22,39 +29,78 @@ char key_buffer[10];
 int16_t key0 = 0;
 
 char short_scale_name_buffer[15];
-int8_t current_key_of = 0;
-
-uint8_t current_scale = 0;
-uint16_t current_scale_mask = CHROMATIC;
+uint8_t current_scale = 1;
+uint16_t current_scale_mask = MAJOR;
 uint8_t nb_notes_in_scale = 12;
+
+uint8_t current_root = 1;
 
 // in_scale_cv_mode = 0 ->  1 semitone / 83 mV  (non-constant CV difference to change note in scale)
 //                  = 1 ->  1 note in_scale / 83 mV (constant CV difference to change note in scale
-bool in_scale_cv_mode = true;
+bool volatile in_scale_cv_mode = false;
 
 uint8_t last_semitone = 0;
 long int trigger_length = 5;
 bool reset_trigger = false;
 long int last_trigger_millis = millis();
 
+
+/////////// ROTARY ENCODERS //////////
+
+uint8_t volatile D10D11_state = 0b1111;
+uint8_t volatile D6D7_state = 0b1111;
+//uint8_t volatile D4D5_state = 0b1111;
+
+int8_t volatile new_root = 0;
+int8_t volatile new_scale = 0;
+
+bool volatile rotary_change = false;
+//////////////////////////////////////
+
 void setup() {
 
-//  Serial.begin(115200);
+  //////// ROTARY ENCODER INTERRUPTS AND PINS ////////
+
+  pinMode(10, INPUT);
+  pinMode(11, INPUT);
+  pinMode(6, INPUT);
+  pinMode(7, INPUT);
+  //  pinMode(4, INPUT);
+  //  pinMode(5, INPUT);
+
+
+  cli();
+  PCICR |= 0b00000101;
+  PCMSK0 |= 0b00001100;
+  PCMSK2 |= 0b11000000;
+  //  PCICR |= 0b00000100;
+  //  PCMSK2 |= 0b11110000;
+  sei();
+
+  ////////////////////////////////////////////////////
+
+  Serial.begin(115200);
 
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
 
   pinMode(TRIGGER_PIN, OUTPUT);
-  pinMode(CHANGE_CV_MODE_PIN, INPUT);
-  pinMode(CHANGE_LAYOUT_PIN, INPUT);
-  pinMode(SCALE_PIN, INPUT);
-  pinMode(CVIN_PIN, INPUT);
+
+  //  pinMode(SCALE_PIN, INPUT);
+  //  pinMode(CVIN_PIN, INPUT);
   pinMode(LED_BUILTIN, OUTPUT);
 
-  digitalWrite(CHANGE_CV_MODE_PIN, LOW);
-  digitalWrite(CHANGE_LAYOUT_PIN, LOW);
-  digitalWrite(TRIGGER_PIN, LOW);
 
-  display.clearDisplay();
+  //  digitalWrite(CHANGE_CV_MODE_PIN, LOW);
+  //  digitalWrite(CHANGE_LAYOUT_PIN, LOW);
+
+  pinMode(CHANGE_CV_MODE_PIN, INPUT);
+  attachInterrupt(digitalPinToInterrupt(CHANGE_CV_MODE_PIN), change_cv_mode_ISR, RISING);
+
+  pinMode(CHANGE_LAYOUT_PIN, INPUT);
+  attachInterrupt(digitalPinToInterrupt(CHANGE_LAYOUT_PIN), change_layout_ISR, RISING);
+
+
+  digitalWrite(TRIGGER_PIN, LOW);
 
   Wire.begin();
   Wire.setClock(400000);
@@ -63,98 +109,22 @@ void setup() {
   ADS.begin();
   ADS.setGain(0);
 
-  //  Serial.println(MCP.isConnected());
-  //  Serial.println(ADS.isConnected());
+  display.clearDisplay();
+  display.display();
 
   keyboard_layout = keyboard_layouts[layout_index];
+
+  if (tuning_dac) {
+    input_and_play_semitone();
+  }
+
+  if (tuning_adc) {
+    print_adc();
+  }
 
 }
 
 void loop() {
-//  Serial.println(ADS.readADC(1));
-  /////////////////////////////////////////////
-  ////////// Change cv mode button ////////////
-  /////////////////////////////////////////////
-
-  if (digitalRead(CHANGE_CV_MODE_PIN) == HIGH) {
-    in_scale_cv_mode = true;
-    digitalWrite(LED_BUILTIN, HIGH);
-
-  } else {
-    in_scale_cv_mode = false;
-    digitalWrite(LED_BUILTIN, LOW);
-
-  }
-  /////////////////////////////////////////////
-  /////////////////////////////////////////////
-  /////////////////////////////////////////////
-
-
-
-  /////////////////////////////////////////////
-  ////////// Change layout button /////////////
-  /////////////////////////////////////////////
-  bool layout_button_state;
-
-
-  layout_button_state = digitalRead(CHANGE_LAYOUT_PIN);
-  if (layout_button_state == HIGH && last_layout_button_state == LOW) {
-    last_layout_button_state = HIGH;
-    layout_index = (layout_index + 1) % 2;
-    keyboard_layout = keyboard_layouts[layout_index];
-    drawKeyboard(current_scale, current_key_of, 0);
-    display.display();
-  }
-  if (layout_button_state == LOW && last_layout_button_state == HIGH) {
-    last_layout_button_state = LOW;
-  }
-
-  /////////////////////////////////////////////
-  /////////////////////////////////////////////
-  /////////////////////////////////////////////
-
-  int16_t new_scale = ADS.readADC(1);
-
-//  if (abs(new_scale - current_scale) < GETADC_AT_ARDUINO_HIGH / NUM_SCALES * 1.5) {
-//    new_scale = current_scale;
-//  }
-
-  new_scale = map(new_scale, 0, GETADC_AT_ARDUINO_HIGH, -1, NUM_SCALES);
-  new_scale = constrain(new_scale, 0, NUM_SCALES - 1);
-
-
-  int16_t new_key_of = ADS.readADC(2);
-
-  new_key_of = map(new_key_of, 0, GETADC_AT_ARDUINO_HIGH, -1, NUM_NOTES);
-  new_key_of = constrain(new_key_of, 0, NUM_NOTES - 1);
-
-  if ((new_key_of != current_key_of) || (new_scale != current_scale)) {
-
-    current_key_of = new_key_of;
-    current_scale = new_scale;
-    current_scale_mask = pgm_read_word_near(scales + current_scale);
-
-    nb_notes_in_scale = 0;
-    for (uint8_t i = 0; i < 12; i++) {
-      nb_notes_in_scale += bitRead(current_scale_mask, i);
-    }
-
-    display.clearDisplay();
-//    printKey(current_key_of, 2);
-    printScale(current_scale, 2);
-
-    //    drawKeyboard(current_scale, current_key_of, current_key_of);
-    drawKeyboard(current_scale, current_key_of, 0);
-
-    // Draw little indicator
-    pixel_loc = map(current_scale, 0, NUM_SCALES - 1, 0, SCREEN_WIDTH - 8);
-//    display.fillRect(pixel_loc, 15, 8, 1, SSD1306_WHITE);
-    display.fillRoundRect(pixel_loc, 16, 8, 6, 1, SSD1306_WHITE);
-
-    display.display();
-
-  }
-
   ////////////////////////////////////
   ////////////////////////////////////
   ////////////////////////////////////
@@ -177,26 +147,29 @@ void loop() {
     reset_trigger = false;
   }
 
+
   if (in_scale_cv_mode) {
+    ///// Notes in scale are evenly spaced along CV /////
+    ///// If there are 5 notes in the scale then there will be 200mV between notes /////
     note_in_scale = map(cv_to_quantize,
                         -16, SEMITONE_CV_UPPER_BOUNDARY_EXCLUSIVE,
                         0, 5 * nb_notes_in_scale + 1);
 
     note_in_scale = constrain(note_in_scale, 0, MAX_DAC_SEMITONE - 1);
 
-    semitone_in_scale = current_key_of;
-    for (uint8_t i = current_key_of, note_idx = 0; i < MAX_DAC_SEMITONE; i++) {
-      bool Qsemitone_in_scaleQ = bitRead(rotate12Right(current_scale_mask, i), 0);
-      semitone_in_scale = Qsemitone_in_scaleQ ? i : semitone_in_scale;
-      note_idx += Qsemitone_in_scaleQ;
+    semitone_in_scale = current_root;
+    for (uint8_t i = current_root, note_idx = 0; i < MAX_DAC_SEMITONE; i++) {
+      bool is_semitone_in_scale = bitRead(rotate12Right(current_scale_mask, i), 0);
+      semitone_in_scale = is_semitone_in_scale ? i : semitone_in_scale;
+      note_idx += is_semitone_in_scale;
       if (note_idx >= note_in_scale) break;
     }
 
   } else {
+    ///// Semitones are evenly spaces along CV with roughly 83.3mV between semitone /////
+    for (uint16_t semitone = current_root; semitone < MAX_DAC_SEMITONE; semitone++) {
 
-    for (uint16_t semitone = current_key_of; semitone < MAX_DAC_SEMITONE; semitone++) {
-
-      if (bitRead(rotate12Right(current_scale_mask, current_key_of + semitone), 0)) {
+      if (bitRead(rotate12Right(current_scale_mask, current_root + semitone), 0)) {
         semitone_in_scale = semitone;
       }
 
@@ -224,8 +197,85 @@ void loop() {
   ////////////////////////////////////
   ////////////////////////////////////
 
+
+  if (refresh_layout) {
+    refresh_layout = false;
+    keyboard_layout = keyboard_layouts[layout_index];
+    drawKeyboard(current_scale, current_root, 0);
+    display.display();
+  }
+
+
+  /////////////////////////////////////////////
+  /////////////////////////////////////////////
+  /////////////////////////////////////////////
+
+  if ((new_root != current_root) || (new_scale != current_scale)) {
+
+    if (new_root != current_root) {
+      Serial.print("change key ");
+      Serial.print(current_root);
+      Serial.print(" -> ");
+      Serial.println(new_root);
+    }
+    if (new_scale != current_scale) {
+      Serial.print("change scale ");
+      Serial.print(current_scale);
+      Serial.print(" -> ");
+      Serial.println(new_scale);
+    }
+
+    current_root = new_root;
+    current_scale = new_scale;
+    current_scale_mask = pgm_read_word_near(scales + current_scale);
+
+
+    nb_notes_in_scale = 0;
+    for (uint8_t i = 0; i < 12; i++) {
+      nb_notes_in_scale += bitRead(current_scale_mask, i);
+    }
+
+    display.clearDisplay();
+    //    printKey(current_root, 2);
+    printScale(current_scale, 2);
+
+    //    drawKeyboard(current_scale, current_root, current_root);
+    drawKeyboard(current_scale, current_root, 0);
+
+    // Draw little indicator
+    //    pixel_loc = map(current_scale, 0, NUM_SCALES - 1, 0, SCREEN_WIDTH - 8);
+    //    //    display.fillRect(pixel_loc, 15, 8, 1, SSD1306_WHITE);
+    //    display.fillRoundRect(pixel_loc, 16, 8, 6, 1, SSD1306_WHITE);
+    drawLittleIndicator(current_scale);
+    display.display();
+
+  }
+
+  if (refresh_little_indicator) {
+    digitalWrite(LED_BUILTIN, in_scale_cv_mode);
+    drawLittleIndicator(current_scale);
+    display.display();
+    refresh_little_indicator = false;
+  }
+
 }
 
+
+///////////////////////////////////////////
+///////////////// Graphics ////////////////
+///////////////////////////////////////////
+
+void drawLittleIndicator(uint8_t scale) {
+  pixel_loc = map(scale, 0, NUM_SCALES - 1, 0, SCREEN_WIDTH - 8);
+  //    display.fillRect(pixel_loc, 15, 8, 1, SSD1306_WHITE);
+  if (in_scale_cv_mode) {
+    display.fillRoundRect(pixel_loc, 16, 8, 6, 1, SSD1306_BLACK);
+    display.drawRoundRect(pixel_loc, 16, 8, 6, 1, SSD1306_WHITE);
+  } else {
+    display.fillRoundRect(pixel_loc, 16, 8, 6, 1, SSD1306_WHITE);
+  }
+
+}
 
 void printKey(uint8_t key, uint8_t text_size) {
   display.fillRect(0, 0, SCREEN_WIDTH / 2, 8 * text_size, SSD1306_BLACK);
@@ -247,11 +297,11 @@ void printScale(uint16_t scale, uint8_t text_size) {
   display.println(short_scale_name_buffer);
 }
 
-void drawKeyboard(int16_t scale, int8_t key_of, int8_t origin_key) {
+void drawKeyboard(int16_t scale, int8_t root, int8_t origin_key) {
   uint16_t on_keys = 0;
 
   static int16_t x0 = 0;
-//  static int16_t y0 = SCREEN_HEIGHT - PROP * KEYBOARD_LAYOUT_HEIGHT;
+  //  static int16_t y0 = SCREEN_HEIGHT - PROP * KEYBOARD_LAYOUT_HEIGHT;
   static int16_t y0 = SCREEN_HEIGHT - PROP * KEYBOARD_LAYOUT_HEIGHT - 8;
 
   uint8_t root_dot_y_offset;
@@ -266,11 +316,11 @@ void drawKeyboard(int16_t scale, int8_t key_of, int8_t origin_key) {
 
 
   // Align with the key at origin of display
-  if (key_of > origin_key) {
-    on_keys = rotate12Left(on_keys, key_of - origin_key);
+  if (root > origin_key) {
+    on_keys = rotate12Left(on_keys, root - origin_key);
   }
-  else if (key_of < origin_key) {
-    on_keys = rotate12Right(on_keys, origin_key - key_of);
+  else if (root < origin_key) {
+    on_keys = rotate12Right(on_keys, origin_key - root);
   }
   // Last nudge to print _k = -1
   on_keys = rotate12Left(on_keys, 1);
@@ -301,7 +351,7 @@ void drawKeyboard(int16_t scale, int8_t key_of, int8_t origin_key) {
 
 
       // Draw root note marker
-      if (k == current_key_of) {
+      if (k == current_root) {
         root_dot_y_offset = (layout_index == 0) ? (2 * keyboard_layout[k][4]) / 3 : (keyboard_layout[k][4] - ROOT_DOT_SIZE) / 2;
         display.fillRoundRect(x0 + PROP * (x_offset + keyboard_layout[k][3] / 2 - 1),
                               y0 + PROP * (keyboard_layout[k][2] + root_dot_y_offset),
@@ -317,11 +367,11 @@ void drawKeyboard(int16_t scale, int8_t key_of, int8_t origin_key) {
 
   //////////////////
   on_keys = pgm_read_word_near(scales + scale);
-  if (key_of > origin_key) {
-    on_keys = rotate12Left(on_keys, key_of - origin_key);
+  if (root > origin_key) {
+    on_keys = rotate12Left(on_keys, root - origin_key);
   }
-  else if (key_of < origin_key) {
-    on_keys = rotate12Right(on_keys, origin_key - key_of);
+  else if (root < origin_key) {
+    on_keys = rotate12Right(on_keys, origin_key - root);
   }
   on_keys = rotate12Left(on_keys, 1);
   //////////////////
@@ -352,8 +402,7 @@ void drawKeyboard(int16_t scale, int8_t key_of, int8_t origin_key) {
                                 keyboard_layout[k][5], SSD1306_BLACK);
         }
 
-      }
-      else {
+      } else {
         display.fillRoundRect(x0 + PROP * x_offset,
                               y0 + PROP * keyboard_layout[k][2],
                               PROP * keyboard_layout[k][3], PROP * keyboard_layout[k][4],
@@ -366,12 +415,14 @@ void drawKeyboard(int16_t scale, int8_t key_of, int8_t origin_key) {
       }
 
       // Draw root note marker
-      if (k == current_key_of) {
+      if (k == current_root) {
         root_dot_y_offset = (layout_index == 0) ? (2 * keyboard_layout[k][4]) / 3 : (keyboard_layout[k][4] - ROOT_DOT_SIZE) / 2;
+
         display.fillRoundRect(x0 + PROP * (x_offset + keyboard_layout[k][3] / 2 - 1),
                               y0 + PROP * (keyboard_layout[k][2] + root_dot_y_offset),
                               PROP * ROOT_DOT_SIZE, PROP * ROOT_DOT_SIZE, 1,
                               SSD1306_BLACK);
+
       }
     }
 
@@ -381,6 +432,12 @@ void drawKeyboard(int16_t scale, int8_t key_of, int8_t origin_key) {
   }
 
 }
+
+///////////////////////////////////////////
+////////////// End graphics ///////////////
+///////////////////////////////////////////
+
+
 
 int mod(int x, int m) {
   return (x % m + m) % m;
@@ -392,4 +449,109 @@ uint16_t rotate12Left(uint16_t n, uint16_t d) {
 
 uint16_t rotate12Right(uint16_t n, uint16_t d) {
   return 0xfff & ((n >> (d % 12)) | (n << (12 - (d % 12))));
+}
+
+
+
+///////////// KEY OF ISR
+ISR(PCINT0_vect) {
+  D10D11_state = (D10D11_state << 1) | digitalRead(10);
+  D10D11_state = (D10D11_state << 1) | digitalRead(11);
+
+
+  if ((D10D11_state & 0b1111) == 0b0111) {
+    new_root += 1;
+  } else if ((D10D11_state & 0b1111) == 0b1011) {
+    new_root -= 1;
+  }
+  if (new_root == NUM_NOTES) {
+    new_root = 0;
+  }
+  if (new_root == -1) {
+    new_root = NUM_NOTES - 1;
+  }
+
+  rotary_change = true;
+}
+
+
+//////////// NEW SCALE ENCODER ISR
+ISR(PCINT2_vect) {
+  D6D7_state = (D6D7_state << 1) | digitalRead(6);
+  D6D7_state = (D6D7_state << 1) | digitalRead(7);
+
+  if ((D6D7_state & 0b1111) == 0b0111) {
+    new_scale += 1;
+  } else if ((D6D7_state & 0b1111) == 0b1011) {
+    new_scale -= 1;
+  }
+  if (new_scale == NUM_SCALES) {
+    new_scale = 0;
+  }
+  if (new_scale == -1) {
+    new_scale = NUM_SCALES - 1;
+  }
+}
+
+
+void change_layout_ISR() {
+  layout_index = (layout_index + 1) % 2;
+  refresh_layout = true;
+}
+
+void change_cv_mode_ISR() {
+  in_scale_cv_mode = !in_scale_cv_mode;
+  refresh_little_indicator = true;
+}
+
+void print_adc() {
+  display.clearDisplay();
+  display.setTextSize(2);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 0);
+  display.println("    Tuning");
+  display.println("       ADC");
+  display.println("dval/d83mV");
+  display.display();
+  for (;;) {
+    Serial.println(ADS.readADC(0));
+  }
+}
+
+
+void input_and_play_semitone() {
+  static String inData;
+
+  display.clearDisplay();
+  display.setTextSize(2);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 0);
+  display.println("");
+  display.println("    Tuning");
+  display.println("       DAC");
+  display.println("d83mV/semi");
+  display.display();
+
+  Serial.println("");
+  for (;;) {
+    char received = ' '; // Each character received
+    inData = ""; // Clear recieved buffer
+    Serial.print("Semitone: ");
+
+    while (received != '\n') { // When new line character is received (\n = LF, \r = CR)
+      if (Serial.available() > 0) // When character in serial buffer read it
+      {
+        received = Serial.read();
+        Serial.print(received); // Echo each received character, terminal dont need local echo
+        inData += received; // Add received character to inData buffer
+      }
+    }
+    inData.trim(); // Eliminate \n, \r, blank and other not “printable”
+    Serial.println();
+    MCP.setValue(inData.toInt());
+    delay(100);
+    Serial.println(ADS.readADC(0));
+
+  }
+
 }
