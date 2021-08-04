@@ -10,10 +10,10 @@ tinyQuan is a CV quantizer with more than a hundred scales.
 - Trigger-out
 
 ##### Controls:
-- __Encoder 1__
+- Encoder 1
 -- Rotate to change scale
 -- Push to activate/deactivate in-scale CV mode. When the mode is on the little indicator appears solid.
-- __Encoder 2__
+- Encoder 2
 -- Rotate to change root note
 -- Push to switch between piano and beatstep pro layout
 
