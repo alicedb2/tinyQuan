@@ -40,9 +40,9 @@ uint8_t current_root_semitone = 1; // Force refresh at start
 bool volatile in_scale_cv_mode = true;
 
 uint8_t last_semitone_index = 0;
-long int trigger_length = 5;
+long int trigger_width = 1;
 bool reset_trigger = false;
-long int last_gate_on_millis = millis();
+long int last_trigger_millis = millis();
 
 
 /////////// ROTARY ENCODERS //////////
@@ -147,7 +147,7 @@ void loop() {
 
   Serial.println(cv_to_quantize);
 
-  if (reset_trigger && millis() - last_gate_on_millis >= trigger_length) {
+  if (reset_trigger && millis() - last_trigger_millis >= trigger_width) {
     digitalWrite(TRIGGER_PIN, LOW);
     reset_trigger = false;
   }
@@ -205,7 +205,7 @@ void loop() {
     reset_trigger = true;
 
     last_semitone_index = semitone_index;
-    last_gate_on_millis = millis();
+    last_trigger_millis = millis();
   }
 
   ////////////////////////////////////
