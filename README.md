@@ -1,6 +1,8 @@
 # tinyQuan
 
-tinyQuan is a CV quantizer based on Arduino with more than a hundred scales. Check [https://www.youtube.com/watch?v=Uh24lcMbAI4](https://www.youtube.com/watch?v=Uh24lcMbAI4&t=2s) for a demo using an earlioer and visibly buggy version.
+tinyQuan is a CV quantizer based on Arduino with more than a hundred scales. 
+
+Check out this [short demo](https://www.youtube.com/watch?v=Uh24lcMbAI4) of an earlier and buggier version of the prototype.
 
 ### Input
 - CV-in (0-5V)
@@ -37,7 +39,7 @@ For now the gate-out
 - 1x SSD1608 128x64 (OLED display)
 - 1x ADS1115 (CV-in ADC)
 - 1x MCP4725 (CV-out DAC)
-- 2x Full-cycle rotary encoder with push-switch (mines were EC11)
+- 2x Full-cycle rotary encoder with push-switch
 - 13x 10K resistors
 - 4x 10nF capacitors
 - 2x 100nF capacitors
@@ -45,4 +47,4 @@ For now the gate-out
 - 1x 3.5mm TS jack with switch
 - LM317 MOSFET
 - 1x trimpot (I use a multi-turn to precisely trim to 5.000V)
-- 5V-12V power supply (LM317 will tolerate up to 37V)
+- 5V-12V power supply of your choice although LM317 will tolerate up to 37V
