@@ -21,6 +21,8 @@ Check out this [short demo](https://www.youtube.com/watch?v=Uh24lcMbAI4) of an e
 
 ### Comments
 
+tinyQuan is rooted on C at 0V.
+
 Check the I2C addresses for the MCP4725 and ADS1115. The default ones for mines were ``0x60`` and ``0x48``.
 
 ##### In-scale CV mode
