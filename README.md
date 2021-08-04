@@ -2,14 +2,14 @@
 
 tinyQuan is a CV quantizer with more than a hundred scales.
 
-#### Input
+### Input
 - CV-in (0-5V)
 
-#### Output
+### Output
 - CV-out (0-5V)
 - Trigger-out
 
-#### Controls:
+### Controls:
 - **Encoder 1**
 	- Rotate to change scale
 	- Push to activate/deactivate in-scale CV mode. When the mode is on the little indicator appears solid.
@@ -17,7 +17,7 @@ tinyQuan is a CV quantizer with more than a hundred scales.
 	- Rotate to change root note
 	- Push to switch between piano and beatstep pro layout
 
-#### Comments
+### Comments
 ##### In-scale CV mode
 This mode when active (default) splits each volt in as many bins as there are notes in the scale. Notes will therefore be separated by the same ΔCV in a given scale, but different ΔCV across different scales.
 
@@ -25,14 +25,14 @@ When deactivated tinyQuan follows the 1V/Oct convention. Semitones are always se
 
 For now the gate-out 
 
-##### TODO
+### TODO
 - This is a very rough prototype. There are no overvoltage protection on any jack. The code is probably still full of bug and certainly not as efficient as it could. The CV-out DAC is 12-bit and should probably be more precise. The CV-in ADC is 16-bit and has 4 ports which is way overkill. Changing either would require complete retuning.
 
 - Add S&H input jack and code.
 
 - Change in-out CV ranges to ±5V. It's annoying having to use unipolar LFOs and S&H as input.
 
-##### BOM
+### BOM
 - 1x Arduino Nano
 - 1x SSD1608 128x64 (OLED display)
 - 1x ADS1115 (CV-in ADC)
