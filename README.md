@@ -23,7 +23,9 @@ Check out this [short demo](https://www.youtube.com/watch?v=Uh24lcMbAI4) of an e
 
 tinyQuan is rooted on C at 0V.
 
-Check the I2C addresses for the MCP4725 and ADS1115. The default ones for mines were ``0x60`` and ``0x48``.
+Check the I2C addresses for the MCP4725, ADS1115, and SSD1306. The default ones for mines were ``0x60``, ``0x48`` and ``0x3D``. 
+
+If using breakboards for the MCP4725/ADS1115/SSD1306 (this schematics assumes you are) you might want to scratch the pull up resistors on any two of the three as per the I2C standard.
 
 ##### In-scale CV mode
 This mode when active (default) splits each volt in as many bins as there are notes in the scale. Notes will therefore be separated by the same ΔCV in a given scale, but different ΔCV across different scales.
