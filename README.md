@@ -25,7 +25,14 @@ This mode when active (default) splits each volt in as many bins as there are no
 
 When deactivated tinyQuan follows the 1V/Oct convention. Semitones are always separated by a ΔCV of 83mV. Not all of them appear in a given scale and thus notes are not equally separated by the same ΔCV.
 
-The trigger pulse is set to 1ms. Change ``trigger_length`` for something longer, or change all instances of ``millis`` to ``micros`` to shorten it even more.
+##### Trigger with
+The trigger width is set to 1ms. Change ``trigger_length`` for something longer, or change all instances of ``millis`` to ``micros`` to shorten it even more.
+
+##### Arduino library requirements
+- Adafruit GFX
+- Adafruit SSD1306
+- Rob Tillaart's MCP4725 and ADS1X15
+
 
 ### TODO
 - This is a very rough prototype. There are no overvoltage protection on any jack. The code is probably still full of bug and certainly not as efficient as it could. The CV-out DAC is 12-bit and should probably be more precise. The CV-in ADC is 16-bit and has 4 ports which is way overkill. Changing either would require complete retuning.
