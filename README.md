@@ -1,6 +1,6 @@
 # tinyQuan
 
-tinyQuan is a CV quantizer with more than a hundred scales.
+tinyQuan is a CV quantizer based on Arduino with more than a hundred scales. Check [https://www.youtube.com/watch?v=Uh24lcMbAI4](https://www.youtube.com/watch?v=Uh24lcMbAI4&t=2s) for a demo using an earlioer and visibly buggy version.
 
 ### Input
 - CV-in (0-5V)
