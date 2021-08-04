@@ -65,16 +65,12 @@ void setup() {
   pinMode(11, INPUT);
   pinMode(6, INPUT);
   pinMode(7, INPUT);
-  //  pinMode(4, INPUT);
-  //  pinMode(5, INPUT);
 
 
   cli();
   PCICR |= 0b00000101;
   PCMSK0 |= 0b00001100;
   PCMSK2 |= 0b11000000;
-  //  PCICR |= 0b00000100;
-  //  PCMSK2 |= 0b11110000;
   sei();
 
   ////////////////////////////////////////////////////
@@ -85,13 +81,7 @@ void setup() {
 
   pinMode(TRIGGER_PIN, OUTPUT);
 
-  //  pinMode(SCALE_PIN, INPUT);
-  //  pinMode(CVIN_PIN, INPUT);
   pinMode(LED_BUILTIN, OUTPUT);
-
-
-  //  digitalWrite(CHANGE_CV_MODE_PIN, LOW);
-  //  digitalWrite(CHANGE_LAYOUT_PIN, LOW);
 
   pinMode(CHANGE_CV_MODE_PIN, INPUT);
   attachInterrupt(digitalPinToInterrupt(CHANGE_CV_MODE_PIN), change_cv_mode_ISR, RISING);
@@ -140,7 +130,7 @@ void loop() {
 
   uint16_t temp_scale_mask = current_scale_mask;
 
-  uint8_t note_in_scale;
+  uint8_t note_in_scale;`
   uint8_t root_semitone;
 
   int16_t cv_to_quantize = ADS.readADC(0);
@@ -153,6 +143,10 @@ void loop() {
   }
 
   if (in_scale_cv_mode) {
+    // This doesn't work as well as I wanted,
+    // sometimes the first note of an octave is
+    // triggered above a round volt probably due
+    // to the tiny non-linearity of the ADC.
     note_in_scale = map(cv_to_quantize,
                         CV_0V_BOUNDARY_INCLUSIVE, CV_ABOVE_5V_BOUNDARY_EXCLUSIVE,
                         0, 5 * nb_notes_in_scale + 1); // 5V spans 5 octave
@@ -253,16 +247,11 @@ void loop() {
     }
 
     display.clearDisplay();
-    //    printKey(current_root_semitone, 2);
+
     printScale(current_scale, 2);
 
-    //    drawKeyboard(current_scale, current_root_semitone, current_root_semitone);
     drawKeyboard(current_scale, current_root_semitone, 0);
 
-    // Draw little indicator
-    //    pixel_loc = map(current_scale, 0, NUM_SCALES - 1, 0, SCREEN_WIDTH - 8);
-    //    //    display.fillRect(pixel_loc, 15, 8, 1, SSD1306_WHITE);
-    //    display.fillRoundRect(pixel_loc, 16, 8, 6, 1, SSD1306_WHITE);
     drawLittleIndicator(current_scale);
     display.display();
 
@@ -556,7 +545,7 @@ void input_and_play_semitone() {
   for (;;) {
     char received = ' '; // Each character received
     inData = ""; // Clear recieved buffer
-    Serial.print("Semitone: ");
+    Serial.print("DAC value (0-4095): ");
 
     while (received != '\n') { // When new line character is received (\n = LF, \r = CR)
       if (Serial.available() > 0) // When character in serial buffer read it
@@ -569,8 +558,6 @@ void input_and_play_semitone() {
     inData.trim(); // Eliminate \n, \r, blank and other not “printable”
     Serial.println();
     MCP.setValue(inData.toInt());
-    delay(100);
-    Serial.println(ADS.readADC(0));
 
   }
 
