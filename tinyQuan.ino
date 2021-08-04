@@ -83,11 +83,13 @@ void setup() {
 
   pinMode(LED_BUILTIN, OUTPUT);
 
-  pinMode(CHANGE_CV_MODE_PIN, INPUT);
-  attachInterrupt(digitalPinToInterrupt(CHANGE_CV_MODE_PIN), change_cv_mode_ISR, RISING);
+  pinMode(CHANGE_CV_MODE_PIN, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(CHANGE_CV_MODE_PIN),
+                  change_cv_mode_ISR, FALLING);
 
-  pinMode(CHANGE_LAYOUT_PIN, INPUT);
-  attachInterrupt(digitalPinToInterrupt(CHANGE_LAYOUT_PIN), change_layout_ISR, RISING);
+  pinMode(CHANGE_LAYOUT_PIN, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(CHANGE_LAYOUT_PIN),
+                  change_layout_ISR, FALLING);
 
 
   digitalWrite(TRIGGER_PIN, LOW);
@@ -130,7 +132,7 @@ void loop() {
 
   uint16_t temp_scale_mask = current_scale_mask;
 
-  uint8_t note_in_scale;`
+  uint8_t note_in_scale;
   uint8_t root_semitone;
 
   int16_t cv_to_quantize = ADS.readADC(0);
@@ -149,7 +151,8 @@ void loop() {
     // to the tiny non-linearity of the ADC.
     note_in_scale = map(cv_to_quantize,
                         CV_0V_BOUNDARY_INCLUSIVE, CV_ABOVE_5V_BOUNDARY_EXCLUSIVE,
-                        0, 5 * nb_notes_in_scale + 1); // 5V spans 5 octave
+                        0, 5 * nb_notes_in_scale + 1);
+    // 5V spans 5 octave
 
 
 
