@@ -20,6 +20,9 @@ Check out this [short demo](https://www.youtube.com/watch?v=Uh24lcMbAI4) of an e
 	- Push to switch between piano and beatstep pro layout
 
 ### Comments
+
+Check the I2C addresses for the MCP4725 and ADS1115. The default ones for mines were ``0x60`` and ``0x48``.
+
 ##### In-scale CV mode
 This mode when active (default) splits each volt in as many bins as there are notes in the scale. Notes will therefore be separated by the same ΔCV in a given scale, but different ΔCV across different scales.
 
