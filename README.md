@@ -53,7 +53,7 @@ The trigger width is set to 1ms. Change ``trigger_length`` for something longer,
 - 1x MCP4725 (CV-out DAC)
 - 2x Full-cycle rotary encoder with push-switch
 - 3x 1K resistors
-- 13x 10K resistors
+- 11x 10K resistors
 - 1x 100pF capacitor
 - 4x 10nF capacitors
 - 2x 100nF capacitors
