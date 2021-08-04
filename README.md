@@ -25,7 +25,7 @@ This mode when active (default) splits each volt in as many bins as there are no
 
 When deactivated tinyQuan follows the 1V/Oct convention. Semitones are always separated by a ΔCV of 83mV. Not all of them appear in a given scale and thus notes are not equally separated by the same ΔCV.
 
-##### Trigger with
+##### Trigger width
 The trigger width is set to 1ms. Change ``trigger_length`` for something longer, or change all instances of ``millis`` to ``micros`` to shorten it even more.
 
 ##### Arduino library requirements
