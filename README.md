@@ -55,3 +55,6 @@ The trigger width is set to 1ms. Change ``trigger_length`` for something longer,
 - LM317 MOSFET
 - 1x trimpot (I use a multi-turn to precisely trim to 5.000V)
 - 5V-12V power supply of your choice although LM317 will tolerate up to 37V
+
+### Schematics
+![tinyQuan schematics](tinyQuan.sch.png)
