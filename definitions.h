@@ -38,22 +38,14 @@ const int16_t PROGMEM semitone_cvs_dac[MAX_DAC_SEMITONE] = {
 // Techically the ADC can distinguish amongst 63 semitones, but the DAC can
 // only produce 57 because of the power of my USB port
 
-#define CV_5V_BOUNDARY_EXCLUSIVE 26832
-//const int16_t PROGMEM semitonecv_to_ADC16read[MAX_DAC_SEMITONE] = {
-//  -16, 432, 880, 1328, 1760, 2208, 2656, 3104, 3552, 4000, 4432, 4880, 
-//  5312, 5776, 6208, 6656, 7088, 7552, 8000, 8432, 8864, 9312, 9760, 10208,
-//  10656, 11104, 11536, 11984, 12432, 12864, 13312, 13760, 14208, 14640, 15088, 15536,  
-//  15968, 16432, 16880, 17328, 17776, 18208, 18656, 19088, 19536, 19984, 20416, 20880,
-//  21312, 21760, 22192, 22640, 23104, 23520, 23984, 24416, 24880, 25312, 25760, 26208,
-//  26624
-//};
-
-
 #define CV_0V_BOUNDARY_INCLUSIVE -32
 #define CV_ABOVE_5V_BOUNDARY_EXCLUSIVE 26832
 #define NB_ADC_BOUNDARIES 62
 
 // ADS1015 maps 6.14 at 32767, but we stop at 5V to stay within standards.
+// These are the inter CVs ADC reading, i.e. we round CVs by placing boundaries
+// at 1/24V left and right of the CV associated with a semitone,
+// in other words if you are within k*83.3mV ± 41.6mV then bin CV into k
 const int16_t PROGMEM inter_semitonecv_to_ADC16read[NB_ADC_BOUNDARIES] = {
         -240,   208,   656,  1104,  1544,  1984,  2432,  2880,  3328,  3776,  4216,  4656,
         5096,  5544,  5992,  6432,  6872,  7320,  7776,  8216,  8648,  9088,  9536,  9984,

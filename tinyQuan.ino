@@ -37,7 +37,7 @@ uint8_t current_root_semitone = 1; // Force refresh at start
 
 // in_scale_cv_mode = 0 ->  1 semitone / 83 mV  (non-constant CV difference to change note in scale)
 //                  = 1 ->  1 note in_scale / 83 mV (constant CV difference to change note in scale
-bool volatile in_scale_cv_mode = false;
+bool volatile in_scale_cv_mode = true;
 
 uint8_t last_semitone_index = 0;
 long int trigger_length = 5;
@@ -144,6 +144,9 @@ void loop() {
   uint8_t root_semitone;
 
   int16_t cv_to_quantize = ADS.readADC(0);
+
+  Serial.println(cv_to_quantize);
+
   if (reset_trigger && millis() - last_gate_on_millis >= trigger_length) {
     digitalWrite(TRIGGER_PIN, LOW);
     reset_trigger = false;
@@ -154,9 +157,7 @@ void loop() {
                         CV_0V_BOUNDARY_INCLUSIVE, CV_ABOVE_5V_BOUNDARY_EXCLUSIVE,
                         0, 5 * nb_notes_in_scale + 1); // 5V spans 5 octave
 
-    Serial.print(cv_to_quantize);
-    Serial.print("  ");
-    Serial.println(note_in_scale);
+
 
     semitones_above_root_in_scale = 0;
     // The upper boundary is a bit janky if root_semitone != 0, we'll constrain it later.
@@ -285,10 +286,11 @@ void drawLittleIndicator(uint8_t scale) {
   pixel_loc = map(scale, 0, NUM_SCALES - 1, 0, SCREEN_WIDTH - 8);
   //    display.fillRect(pixel_loc, 15, 8, 1, SSD1306_WHITE);
   if (in_scale_cv_mode) {
+    display.fillRoundRect(pixel_loc, 16, 8, 6, 1, SSD1306_WHITE);
+  } else {
     display.fillRoundRect(pixel_loc, 16, 8, 6, 1, SSD1306_BLACK);
     display.drawRoundRect(pixel_loc, 16, 8, 6, 1, SSD1306_WHITE);
-  } else {
-    display.fillRoundRect(pixel_loc, 16, 8, 6, 1, SSD1306_WHITE);
+
   }
 
 }
@@ -454,21 +456,6 @@ void drawKeyboard(int16_t scale, int8_t root, int8_t origin_key) {
 ///////////////////////////////////////////
 
 
-
-int mod(int x, int m) {
-  return (x % m + m) % m;
-}
-
-uint16_t rotate12Left(uint16_t n, uint16_t d) {
-  return 0xfff & ((n << (d % 12)) | (n >> (12 - (d % 12))));
-}
-
-uint16_t rotate12Right(uint16_t n, uint16_t d) {
-  return 0xfff & ((n >> (d % 12)) | (n << (12 - (d % 12))));
-}
-
-
-
 ///////////// KEY OF ISR
 ISR(PCINT0_vect) {
   D10D11_state = (D10D11_state << 1) | digitalRead(10);
@@ -519,6 +506,23 @@ void change_cv_mode_ISR() {
   in_scale_cv_mode = !in_scale_cv_mode;
   refresh_little_indicator = true;
 }
+
+
+
+///////////// Utilities //////////////
+
+int mod(int x, int m) {
+  return (x % m + m) % m;
+}
+
+uint16_t rotate12Left(uint16_t n, uint16_t d) {
+  return 0xfff & ((n << (d % 12)) | (n >> (12 - (d % 12))));
+}
+
+uint16_t rotate12Right(uint16_t n, uint16_t d) {
+  return 0xfff & ((n >> (d % 12)) | (n << (12 - (d % 12))));
+}
+
 
 void print_adc() {
   display.clearDisplay();
