@@ -6,15 +6,6 @@
 #define CHANGE_CV_MODE_PIN 3
 #define TRIGGER_PIN 8
 
-// This is used for in_scale_cv_mode = 1 since we allow 5 octaves.
-// There's no need to change this value
-#define GETADC_AT_5V 26656
-
-// It might unfortunately to recommended to calibrate this value
-// according to one's particlar power supply. On USB I'm at ~4748 mV
-// and the ADC's read 25376 amongst the noise
-#define GETADC_AT_ARDUINO_HIGH 25200
-
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels

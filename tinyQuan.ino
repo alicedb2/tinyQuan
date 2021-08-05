@@ -20,8 +20,6 @@ bool volatile refresh_little_indicator = false;
 
 uint8_t volatile layout_index = 0;
 bool volatile refresh_layout = false;
-//bool last_layout_button_state = false;
-//long int last_layout_button_change_millis = millis();
 
 uint8_t pixel_loc = 0;
 
@@ -40,16 +38,15 @@ uint8_t current_root_semitone = 1; // Force refresh at start
 bool volatile in_scale_cv_mode = true;
 
 uint8_t last_semitone_index = 0;
-long int trigger_width = 1;
-bool reset_trigger = false;
-long int last_trigger_millis = millis();
+long int trigger_out_width = 10;
+bool reset_trigger_out = false;
+long int last_trigger_out_millis = millis();
 
 
 /////////// ROTARY ENCODERS //////////
 
 uint8_t volatile D10D11_state = 0b1111;
 uint8_t volatile D6D7_state = 0b1111;
-//uint8_t volatile D4D5_state = 0b1111;
 
 int8_t volatile new_root = 0;
 int8_t volatile new_scale = 0;
@@ -79,7 +76,7 @@ void setup() {
 
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
 
-  pinMode(TRIGGER_PIN, OUTPUT);
+  pinMode(trigger_out_PIN, OUTPUT);
 
   pinMode(LED_BUILTIN, OUTPUT);
 
@@ -92,7 +89,7 @@ void setup() {
                   change_layout_ISR, FALLING);
 
 
-  digitalWrite(TRIGGER_PIN, LOW);
+  digitalWrite(trigger_out_PIN, LOW);
 
   Wire.begin();
   Wire.setClock(400000);
@@ -139,15 +136,15 @@ void loop() {
 
   Serial.println(cv_to_quantize);
 
-  if (reset_trigger && millis() - last_trigger_millis >= trigger_width) {
-    digitalWrite(TRIGGER_PIN, LOW);
-    reset_trigger = false;
+  if (reset_trigger_out && millis() - last_trigger_out_millis >= trigger_out_width) {
+    digitalWrite(trigger_out_PIN, LOW);
+    reset_trigger_out = false;
   }
 
   if (in_scale_cv_mode) {
     // This doesn't work as well as I wanted,
     // sometimes the first note of an octave is
-    // triggered above a round volt probably due
+    // trigger_outed above a round volt probably due
     // to the tiny non-linearity of the ADC.
     note_in_scale = map(cv_to_quantize,
                         CV_0V_BOUNDARY_INCLUSIVE, CV_ABOVE_5V_BOUNDARY_EXCLUSIVE,
@@ -198,11 +195,11 @@ void loop() {
 
 
   if (last_semitone_index != semitone_index) {
-    digitalWrite(TRIGGER_PIN, HIGH);
-    reset_trigger = true;
+    digitalWrite(trigger_out_PIN, HIGH);
+    reset_trigger_out = true;
 
     last_semitone_index = semitone_index;
-    last_trigger_millis = millis();
+    last_trigger_out_millis = millis();
   }
 
   ////////////////////////////////////
