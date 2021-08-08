@@ -46,7 +46,9 @@ The trigger width is set to 1ms. Change ``trigger_length`` for something longer,
 
 - Add S&H input jack and code.
 
-- Change in-out CV ranges to ±5V. It's annoying having to use unipolar LFOs and S&H as input.
+- Change in-out CV ranges to ±5V. It's annoying having to use unipolar LFOs and S&H as input. Worst of all you can't go under the root note!
+
+- Overvoltage and input protection.
 
 ### BOM
 - 1x Arduino Nano
