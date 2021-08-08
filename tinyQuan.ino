@@ -76,7 +76,7 @@ void setup() {
 
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
 
-  pinMode(trigger_out_PIN, OUTPUT);
+  pinMode(TRIGGER_OUT_PIN, OUTPUT);
 
   pinMode(LED_BUILTIN, OUTPUT);
 
@@ -89,7 +89,7 @@ void setup() {
                   change_layout_ISR, FALLING);
 
 
-  digitalWrite(trigger_out_PIN, LOW);
+  digitalWrite(TRIGGER_OUT_PIN, LOW);
 
   Wire.begin();
   Wire.setClock(400000);
@@ -137,7 +137,7 @@ void loop() {
   Serial.println(cv_to_quantize);
 
   if (reset_trigger_out && millis() - last_trigger_out_millis >= trigger_out_width) {
-    digitalWrite(trigger_out_PIN, LOW);
+    digitalWrite(TRIGGER_OUT_PIN, LOW);
     reset_trigger_out = false;
   }
 
@@ -195,7 +195,7 @@ void loop() {
 
 
   if (last_semitone_index != semitone_index) {
-    digitalWrite(trigger_out_PIN, HIGH);
+    digitalWrite(TRIGGER_OUT_PIN, HIGH);
     reset_trigger_out = true;
 
     last_semitone_index = semitone_index;

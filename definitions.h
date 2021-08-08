@@ -4,7 +4,7 @@
 #define KEY_OF_PIN A7
 #define CHANGE_LAYOUT_PIN 2
 #define CHANGE_CV_MODE_PIN 3
-#define TRIGGER_PIN 8
+#define TRIGGER_OUT_PIN 8
 
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
